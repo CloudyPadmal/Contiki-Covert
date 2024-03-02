@@ -13,7 +13,8 @@ PATTERN='serial-log.py'
 SLEEP_DURATION=10                 # define the duration of logging in seconds
 
 # Check if the nodes are connected ############################################
-echo -e "\n${YELOW}Checking if the nodes are connected...${CLEAR}"
+clear
+echo -e "${YELOW}Checking if the nodes are connected...${CLEAR}"
 
 HAS_NODE_RX=$(ls /dev | grep -c "$NODE_RX")
 if [ "$HAS_NODE_RX" -eq 0 ]; then

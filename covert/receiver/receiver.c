@@ -16,7 +16,7 @@
 #define SNIFFER_INTERVAL (CLOCK_SECOND / 100)
 
 PROCESS(receiver_node, "Receiver");
-AUTOSTART_PROCESSES(&sniffer_node);
+AUTOSTART_PROCESSES(&receiver_node);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 PROCESS_THREAD(receiver_node, ev, data) {
