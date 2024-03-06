@@ -12,6 +12,9 @@ L_WIDTH = 1
 
 props = dict(boxstyle='round', facecolor='#cccccc', alpha=0.5)
 
+def reject_outliers(data, m=2):
+    return data[abs(data - np.mean(data)) < m * np.std(data)]
+
 def extract_packet_data(filename):
     """
     This method will take a file of packet readings as input and go through each line.
@@ -27,6 +30,8 @@ def extract_packet_data(filename):
     node_points = []
     node_seq = []
     looking_for_reset = True
+    previous_timestamp = None
+    timestamps = []
     for line in file_node_lines:
         try:
             line_as_list = line.split(' ')
@@ -37,12 +42,20 @@ def extract_packet_data(filename):
                     looking_for_reset = False
                 else:
                     continue
+            timestamp = float(line_as_list[0].split(":")[0][1:-1])
+            if previous_timestamp is None:
+                previous_timestamp = timestamp
+            else:
+                time_difference = timestamp - previous_timestamp
+                previous_timestamp = timestamp
+                timestamps.append(time_difference)
             node_points.append(rssi)
             node_seq.append(seq_count)
         except Exception as e:
             print(e)
             continue
-    print("Parsing", filename.name)
+    time_average = np.average(reject_outliers(np.array(timestamps), 2))
+    print("Parsing", filename.name, "; Rate =", str(round(time_average * 1000, 2)), "ms")
     return node_points, node_seq
 
 

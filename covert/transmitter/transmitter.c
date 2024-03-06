@@ -15,6 +15,8 @@
 
 /* Configuration */
 #define SEND_INTERVAL (CLOCK_SECOND * 2e-1)
+// 2e-1 seems like a reasonable rate. Increase this rate; don't decrease
+// as it will make the readings too messy to distinguish.
 
 PROCESS(transmitter, "Transmitter");
 AUTOSTART_PROCESSES(&transmitter);
@@ -127,7 +129,6 @@ PROCESS_THREAD(transmitter, ev, data) {
         }
 
         else if (ev == PROCESS_EVENT_TIMER) {
-            LOG_INFO("Index %d @ %d\n", code_block[code_block_index], code_block_index);
             // Initiation
             if (code_block[code_block_index] == 1) {
                 NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_POWER_MODE, RADIO_POWER_MODE_CARRIER_ON);
