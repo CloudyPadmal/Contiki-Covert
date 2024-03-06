@@ -6,25 +6,11 @@ plt.rcParams["figure.figsize"] = (20, 8)
 CHANNEL = int(input("CHANNEL: ") or "25")
 POWER_L = int(input("POWER: ") or "0")
 RATE_P = int(input("RATE: ") or "50")
-PACKETS = int(input("PACKETS: ") or "250")
-SHW_PLT = bool(input("SHOW PLOT? ") or False)
-
-MIN_RSSI = -100
-MAX_RSSI = -10
-BIN_PORTION = PACKETS / 10
-BINS = [i * BIN_PORTION for i in range(11)]
+HIDE_PLT = bool(input("Hide plot? ") or False)
 
 L_WIDTH = 1
 
 props = dict(boxstyle='round', facecolor='#cccccc', alpha=0.5)
-
-TX_NODE = '5b7f.b713.0074.1200'
-
-ttl = 'RSSI Measurements {Total Packet Count: ' \
-      + str(PACKETS) + '; Transmit Power: ' \
-      + str(POWER_L) + ' dBm; Packet Rate: ' \
-      + str(RATE_P) + ' ms; Channel: ' + str(int(CHANNEL)) + '}'
-
 
 def extract_packet_data(filename):
     """
@@ -35,21 +21,27 @@ def extract_packet_data(filename):
     There will be four arrays returned at last, two with RSSI readings and two with seq.
 
     [INFO: EavesDr   ] Received 0 from 0f2a.7d13.0074.1200 [RSSI: -60 | LQI: 107]
+    [INFO: Receiver  ] Sniffed RSSI: [1647] -40 on channel 21
     """
     file_node_lines = filename.readlines()
     node_points = []
     node_seq = []
-
+    looking_for_reset = True
     for line in file_node_lines:
-        if TX_NODE in line:
-            try:
-                line_as_list = line.split(' ')
-                rssi = int(line_as_list[-4])
-                seq = int(line_as_list[-8])
-                node_points.append(rssi)
-                node_seq.append(seq)
-            except:
-                continue
+        try:
+            line_as_list = line.split(' ')
+            rssi = int(line_as_list[-4])
+            seq_count = int(line_as_list[6][1:-1])
+            if looking_for_reset:
+                if seq_count == 0:
+                    looking_for_reset = False
+                else:
+                    continue
+            node_points.append(rssi)
+            node_seq.append(seq_count)
+        except Exception as e:
+            print(e)
+            continue
     print("Parsing", filename.name)
     return node_points, node_seq
 
@@ -71,8 +63,6 @@ f, ((ev1, ev2, ev3, ev4, pha), (fr1, fr2, fr3, fr4, fr5)) = plt.subplots(2, 5, g
 eAxes = [ev1, ev2, ev3, ev4, pha]
 fAxes = [fr1, fr2, fr3, fr4, fr5]
 
-f.suptitle(ttl, fontweight='bold')
-
 (P1_E1, S_P1_E1) = extract_packet_data(Ev1)
 (P1_E2, S_P1_E2) = extract_packet_data(Ev2)
 (P1_E3, S_P1_E3) = extract_packet_data(Ev3)
@@ -81,10 +71,23 @@ f.suptitle(ttl, fontweight='bold')
 
 PacketList = [P1_E1, P1_E2, P1_E3, P1_E4, P1_P2]
 SequenceList = [S_P1_E1, S_P1_E2, S_P1_E3, S_P1_E4, S_P1_P2]
-
+PacketCountList = [len(S_P1_E1), len(S_P1_E2), len(S_P1_E3), len(S_P1_E4), len(S_P1_P2)]
 #######################################################################################################################
 # Plots                                                                                                  #
 #######################################################################################################################
+
+MIN_RSSI = -100
+MAX_RSSI = -10
+PACKETS = max(PacketCountList)
+BIN_PORTION = PACKETS / 10
+BINS = [i * BIN_PORTION for i in range(11)]
+
+ttl = 'RSSI Measurements {Total Count: ' \
+      + str(PACKETS) + '; Transmit Power: ' \
+      + str(POWER_L) + ' dBm; Packet Rate: ' \
+      + str(RATE_P) + ' ms; Channel: ' + str(int(CHANNEL)) + '}'
+
+f.suptitle(ttl, fontweight='bold')
 
 for f in range(len(fAxes)):
     title = 'Eaves ' + str(f + 1)
@@ -120,5 +123,5 @@ Notes_File = open("Notes.txt", 'a')
 Notes_File.write(NOTES)
 Notes_File.close()
 
-if SHW_PLT:
+if not HIDE_PLT:
     plt.show()

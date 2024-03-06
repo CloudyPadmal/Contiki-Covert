@@ -14,7 +14,7 @@
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 /* Configuration */
-#define SEND_INTERVAL (0.01 * CLOCK_SECOND)
+#define SEND_INTERVAL (CLOCK_SECOND * 2e-1)
 
 PROCESS(transmitter, "Transmitter");
 AUTOSTART_PROCESSES(&transmitter);
@@ -27,8 +27,8 @@ PROCESS_THREAD(transmitter, ev, data) {
     int channel;
     static bool test_mode = false;
 
-    int code_block_index = 0;
-    int code_block[] = {1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0};
+    static int code_block_index = 0;
+    static int code_block[] = {1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0};
 
     PROCESS_BEGIN();
     etimer_set(&periodic_timer, SEND_INTERVAL);
@@ -58,15 +58,16 @@ PROCESS_THREAD(transmitter, ev, data) {
 
                 case 'R': // Full reset
                     LOG_INFO("Full reset; max power\n");
-                    power_pos = 1;
+                    power_pos = 7;
                     channel_pos = 21;
+                    code_block_index = 0;
                     NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_TXPOWER, POWER[power_pos]);
                     NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_TXPOWER, &power);
                     NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_CHANNEL, channel_pos);
                     NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_CHANNEL, &channel);
-                    NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_POWER_MODE, RADIO_POWER_MODE_CARRIER_ON);
-                    LOG_INFO("Test mode is ON at CH %d with %d dBm power\n", channel, power);
-                    test_mode = true;
+//                    NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_POWER_MODE, RADIO_POWER_MODE_CARRIER_ON);
+                    LOG_INFO("Test mode is OFF at CH %d with %d dBm power\n", channel, power);
+                    test_mode = false;
                     leds_off(LEDS_ALL);
                     leds_off(LEDS_RED);
                     break;
@@ -126,19 +127,20 @@ PROCESS_THREAD(transmitter, ev, data) {
         }
 
         else if (ev == PROCESS_EVENT_TIMER) {
+            LOG_INFO("Index %d @ %d\n", code_block[code_block_index], code_block_index);
             // Initiation
             if (code_block[code_block_index] == 1) {
                 NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_POWER_MODE, RADIO_POWER_MODE_CARRIER_ON);
+                leds_toggle(LEDS_RED);
             } else {
                 NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_POWER_MODE, RADIO_POWER_MODE_CARRIER_OFF);
+                leds_toggle(LEDS_GREEN);
             }
             code_block_index++;
-            if (code_block_index > sizeof(code_block)) {
+            if (code_block_index == 20) {
                 code_block_index = 0;
+                leds_toggle(LEDS_YELLOW);
             }
-            leds_toggle(LEDS_RED);
-            leds_toggle(LEDS_GREEN);
-            leds_toggle(LEDS_YELLOW);
             etimer_reset(&periodic_timer);
         }
     }

@@ -13,7 +13,7 @@
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 /* Configuration */
-#define SNIFFER_INTERVAL (CLOCK_SECOND / 100)
+#define SNIFFER_INTERVAL (CLOCK_SECOND * 1e-6)
 
 PROCESS(receiver_node, "Receiver");
 AUTOSTART_PROCESSES(&receiver_node);
@@ -23,6 +23,7 @@ PROCESS_THREAD(receiver_node, ev, data) {
     static struct etimer sniffer_timer;
     etimer_set(&sniffer_timer, SNIFFER_INTERVAL);
 
+    static int sniff_counter = 0;
     static int sniffed_rssi;
     int channel;
     static int channel_pos = 21;
@@ -37,6 +38,13 @@ PROCESS_THREAD(receiver_node, ev, data) {
         if (ev == serial_line_event_message) {
             char CH = *(char *) data;
             switch (CH) {
+                case 'R': // Full reset
+                    LOG_INFO("Full reset\n");
+                    sniff_counter = 0;
+                    leds_off(LEDS_ALL);
+                    leds_off(LEDS_RED);
+                    break;
+
                 case '\0': // Log status
                     NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_CHANNEL, &channel);
                     LOG_INFO("Receiving channel is %d, change (c/C): ", channel);
@@ -50,6 +58,7 @@ PROCESS_THREAD(receiver_node, ev, data) {
                     NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_CHANNEL, channel_pos);
                     NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_CHANNEL, &channel);
                     LOG_INFO("Channel is increased to %d (c/C): ", channel);
+                    sniff_counter = 0;
                     break;
 
                 case 'c': // Decrease channel
@@ -60,6 +69,7 @@ PROCESS_THREAD(receiver_node, ev, data) {
                     NETSTACK_CONF_RADIO.set_value(RADIO_PARAM_CHANNEL, channel_pos);
                     NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_CHANNEL, &channel);
                     LOG_INFO("Channel is decreased to %d (c/C): ", channel);
+                    sniff_counter = 0;
                     break;
 
                 default:
@@ -72,9 +82,15 @@ PROCESS_THREAD(receiver_node, ev, data) {
         } else if (ev == PROCESS_EVENT_TIMER) {
             NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_RSSI, &sniffed_rssi);
             NETSTACK_CONF_RADIO.get_value(RADIO_PARAM_CHANNEL, &channel);
-            LOG_INFO("Sniffed RSSI: %d on channel %d\n", sniffed_rssi, channel);
-            leds_toggle(LEDS_RED);
-            leds_toggle(LEDS_YELLOW);
+            LOG_INFO("Sniffed RSSI: [%d] %d on channel %d\n", sniff_counter, sniffed_rssi, channel);
+            if (sniff_counter % 100 == 0) {
+                leds_toggle(LEDS_RED);
+                leds_toggle(LEDS_YELLOW);
+            }
+            sniff_counter++;
+            if (sniff_counter < 0) {
+                sniff_counter = 0;
+            }
             etimer_reset(&sniffer_timer);
         }
     }

@@ -3,6 +3,7 @@ import os
 import serial as s
 import sys
 import signal
+import time
 
 Transmitter = True
 Receiver = False
@@ -32,12 +33,7 @@ def handler(signum, frame):
 
 
 signal.signal(signal.SIGABRT, handler)
-# ser.write(b's\n')
-# ser.write(b'r\n')
-# ser.write(b'w\n')
-# ser.write(b'\n')
-if mode == Transmitter:  # Reset packet counter and start transmission
-    ser.write(b'R\n')
+ser.write(b'R\n')
 
 attempted = False
 
@@ -47,9 +43,9 @@ while True:
             line = ser.readline()
             if line:
                 L = line.decode('utf-8', errors='ignore')
-                file.write(L)
+                file.write(str(time.time()) + ":" + L)
         else:
-            command = input("Command (r,R,w,s,q): ")
+            command = input("Command (c,C,p,P,R,X,/0,q): ")
             if command == 'q':
                 ser.close()
                 exit()
