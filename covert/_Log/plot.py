@@ -12,8 +12,10 @@ L_WIDTH = 1
 
 props = dict(boxstyle='round', facecolor='#cccccc', alpha=0.5)
 
+
 def reject_outliers(data, m=2):
     return data[abs(data - np.mean(data)) < m * np.std(data)]
+
 
 def extract_packet_data(filename):
     """
@@ -111,7 +113,7 @@ for f in range(len(fAxes)):
 
     prr = 'PRR:' + str(round((len(PacketList[f]) / PACKETS), 3) * 100)[:4] + '%'
     eAx.plot(SequenceList[f], PacketList[f], label='from transmitter', linewidth=L_WIDTH * 2)
-    eAx.plot([np.mean(PacketList[f]) for _ in range(PACKETS)], label='rssi mean', linewidth=L_WIDTH, color=[0,0,0])
+    eAx.plot([np.mean(PacketList[f]) for _ in range(PACKETS)], label='rssi mean', linewidth=L_WIDTH, color=[0, 0, 0])
     eAx.set_xlim(0, PACKETS)
     eAx.set_ylim(MIN_RSSI, MAX_RSSI)
     eAx.set_title(title)
